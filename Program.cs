@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Security.Principal;
 
 namespace BankingApp
 {
@@ -33,11 +32,11 @@ namespace BankingApp
         public Account(string accountHolderName, string accountType, decimal initialDeposit)
         {
             AccountHolderName = accountHolderName;
-
             AccountType = accountType;
             Balance = initialDeposit;
             AccountNumber = GenerateAccountNumber();
             Transactions = new List<Transaction>();
+            Transactions.Add(new Transaction("Deposit", initialDeposit));
         }
 
         private string GenerateAccountNumber()
@@ -59,7 +58,11 @@ namespace BankingApp
                 Transactions.Add(new Transaction("Withdrawal", amount));
                 return true;
             }
-            return false;
+            else
+            {
+                Console.WriteLine("Insufficient funds. Withdrawal failed.");
+                return false;
+            }
         }
 
         public void CalculateInterest(decimal interestRate)
@@ -73,7 +76,7 @@ namespace BankingApp
             }
             else
             {
-                Console.WriteLine("Interest can be calculated only to the savings account.");
+                Console.WriteLine("Interest can only be calculated for savings accounts.");
             }
         }
     }
@@ -106,7 +109,6 @@ namespace BankingApp
             bool exit = false;
             while (!exit)
             {
-                
                 if (currentUser == null)
                 {
                     Console.WriteLine("\n---Banking Application ---");
@@ -134,7 +136,7 @@ namespace BankingApp
                 {
                     Console.WriteLine("\n---Banking Application Menu---");
                     Console.WriteLine($"\nWelcome, {currentUser.Username}");
-                    Console.WriteLine("\n1. Open New Account");
+                    Console.WriteLine("1. Open New Account");
                     Console.WriteLine("2. Deposit");
                     Console.WriteLine("3. Withdraw");
                     Console.WriteLine("4. Check Balance");
@@ -164,7 +166,9 @@ namespace BankingApp
                             break;
                         case "7":
                             currentUser = null;
+          
                             Console.WriteLine("Logged out successfully.");
+                            Console.Clear();
                             break;
                         default:
                             Console.WriteLine("Invalid option. Try again.");
@@ -180,10 +184,9 @@ namespace BankingApp
             Console.Write("Enter username: ");
             string username = Console.ReadLine();
 
-            // Check if the username already exists
             if (users.Exists(user => user.Username == username))
             {
-                Console.WriteLine("User already exists. Please try logging in or create with a new UserName");
+                Console.WriteLine("User already exists. Please try logging in or use another username.");
                 return;
             }
 
@@ -191,35 +194,23 @@ namespace BankingApp
             string password = Console.ReadLine();
             User newUser = new User(username, password);
             users.Add(newUser);
-            currentUser = newUser; 
-
             Console.WriteLine("User registered successfully. You are now logged in.");
         }
 
-
         static void Login()
         {
-            //if the user is already registered then login
             Console.Write("Enter username: ");
             string username = Console.ReadLine();
             Console.Write("Enter password: ");
             string password = Console.ReadLine();
             currentUser = users.Find(user => user.Username == username && user.Password == password);
-            if (currentUser != null)
-            {
-                Console.WriteLine("Login successful.");
-            }
-            else
-            {
-                Console.WriteLine("Invalid credentials.");
-            }
+            Console.WriteLine(currentUser != null ? "Login successful." : "Invalid credentials.");
         }
 
         static void OpenAccount()
         {
-            //creating a new Account a user can only create 2 different accounts.
             Console.Clear();
-            Console.WriteLine("\n---Open Account---");
+            Console.WriteLine("\n--- Open Account ---");
             Console.Write("Enter account holder's name: ");
             string name = Console.ReadLine();
             Console.Write("Enter account type (savings/checking): ");
@@ -227,7 +218,7 @@ namespace BankingApp
 
             while (type != "savings" && type != "checking")
             {
-                Console.WriteLine("!!! Enter The Account type Correctly");
+                Console.WriteLine("Invalid account type. Please enter 'savings' or 'checking'.");
                 Console.Write("Enter account type (savings/checking): ");
                 type = Console.ReadLine();
             }
@@ -237,24 +228,19 @@ namespace BankingApp
 
             Account newAccount = new Account(name, type, initialDeposit);
 
-            // Check the account limit before adding
             if (currentUser.Accounts.Count < 2)
             {
                 currentUser.Accounts.Add(newAccount);
                 Console.WriteLine($"Account created successfully. Account Number: {newAccount.AccountNumber}");
-                newAccount.Deposit(initialDeposit);
-                Console.WriteLine($"Initial deposit of {initialDeposit} added successfully to Account Number: {newAccount.AccountNumber}");
             }
             else
             {
-                Console.WriteLine("Account cannot be created because you have exceeded the account limit (only 2 accounts allowed per user).");
+                Console.WriteLine("Only two accounts per user are allowed.");
             }
         }
 
-
         static void Deposit()
         {
-            //Deposit the amount.
             Console.Clear();
             Console.WriteLine("\n--- Deposit ---");
             Account account = SelectAccount();
@@ -265,39 +251,26 @@ namespace BankingApp
             account.Deposit(amount);
             Console.WriteLine("Deposit successful.");
         }
-        static void Deposit(decimal amnt)
-        {
-            Account account = SelectAccount();
-            account.Deposit(amnt);
-            Console.WriteLine($"Deposit of {amnt} is Successfull !!");
-        }
 
         static void Withdraw()
         {
-            //withdrawal of the amount
             Console.Clear();
-            
+            Console.WriteLine("\n--- Withdraw ---");
             Account account = SelectAccount();
-            Console.WriteLine("\n--- WithDraw ---");
             if (account == null) return;
 
             Console.Write("Enter withdrawal amount: ");
             decimal amount = decimal.Parse(Console.ReadLine());
-            if (account.Withdraw(amount))
+            if (!account.Withdraw(amount))
             {
-                Console.WriteLine("Withdrawal successful.");
-            }
-            else
-            {
-                Console.WriteLine("Insufficient funds.");
+                Console.WriteLine("Withdrawal failed due to insufficient funds.");
             }
         }
 
         static void CheckBalance()
         {
-            //check the balance in the account
             Console.Clear();
-            Console.WriteLine("\n---Check Balance---");
+            Console.WriteLine("\n--- Check Balance ---");
             Account account = SelectAccount();
             if (account == null) return;
 
@@ -306,14 +279,11 @@ namespace BankingApp
 
         static void GenerateStatement()
         {
-            //generate the statement of all the transactions
             Console.Clear();
-
-            Console.WriteLine("\n---Generate Statement---");
+            Console.WriteLine("\n--- Transaction History ---");
             Account account = SelectAccount();
             if (account == null) return;
 
-            Console.WriteLine("\n--- Transaction History ---");
             foreach (var transaction in account.Transactions)
             {
                 Console.WriteLine($"{transaction.Date}: {transaction.Type} of {transaction.Amount}");
@@ -322,10 +292,8 @@ namespace BankingApp
 
         static void CalculateInterest()
         {
-            //calculating the interest 
             Console.Clear();
-
-            Console.WriteLine("\n---Interest Amount---");
+            Console.WriteLine("\n--- Calculate Interest ---");
             Account account = SelectAccount();
             if (account == null) return;
 
@@ -336,9 +304,6 @@ namespace BankingApp
 
         static Account SelectAccount()
         {
-            //if the user has the multiple accounts choose the required account
-            Console.Clear();
-
             if (currentUser.Accounts.Count == 0)
             {
                 Console.WriteLine("No accounts found.");
